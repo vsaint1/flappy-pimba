@@ -119,19 +119,19 @@ void spawn_pipe() {
         top_pipe->set_layer(1);
         top_pipe->set_collision_mask((1 << 0));
 
-        float top_body_center_y = gap_top - (top_height / 2.0f);
+        float top_body_center_y = gap_top * 0.5f;
         top_pipe->set_transform({{spawn_x, top_body_center_y}, {1.f, 1.f}, 0.0f});
-        //
-        // Sprite2D* top_sprite = new Sprite2D(pipe_texture);
-        // top_sprite->set_region({0, 0, 52, 320}, {PIPE_WIDTH, top_height});
-        // top_sprite->set_transform({{-PIPE_WIDTH * 0.5f,0}, {1.f, 1.f}, 0.0f});
-        // top_sprite->set_flip_vertical(true);
-        // top_pipe->add_child("Sprite", top_sprite);
 
+        Sprite2D* top_sprite = new Sprite2D(pipe_texture);
+        top_sprite->set_region({0, 0, 52, 320}, {PIPE_WIDTH, top_height});
+        top_sprite->set_flip_vertical(true);
+
+        top_pipe->add_child("Sprite", top_sprite);
         ctx.root->add_child("TopPipe", top_pipe);
     }
 
-    float bottom_height = GEngine->Config.get_viewport().height - gap_bottom;
+    float screen_h = GEngine->Config.get_viewport().height;
+    float bottom_height = screen_h - gap_bottom;
     if (bottom_height > 0.0f) {
         RigidBody2D* bottom_pipe = new RigidBody2D();
         bottom_pipe->body_type   = BodyType::KINEMATIC;
@@ -141,12 +141,13 @@ void spawn_pipe() {
         bottom_pipe->set_layer(1);
         bottom_pipe->set_collision_mask((1 << 0));
 
-        float screen_h = GEngine->Config.get_viewport().height;
-        bottom_pipe->set_transform({{spawn_x, screen_h - bottom_height / 2.0f}, {1.f, 1.f}, 0.0f});
+        float bottom_body_center_y = gap_bottom + bottom_height * 0.5f;
+        bottom_pipe->set_transform({{spawn_x, bottom_body_center_y}, {1.f, 1.f}, 0.0f});
 
         Sprite2D* bottom_sprite = new Sprite2D(pipe_texture);
         bottom_sprite->set_region({0, 0, 52, 320}, {PIPE_WIDTH, bottom_height});
-        bottom_sprite->set_transform({{-PIPE_WIDTH * 0.5f, -bottom_height * 0.5f}, {1.f, 1.f}, 0.0f});
+        // align sprite with body center
+        bottom_sprite->set_transform({{0, 0}, {1.f, 1.f}, 0.0f});
 
         bottom_pipe->add_child("Sprite", bottom_sprite);
         ctx.root->add_child("BottomPipe", bottom_pipe);
@@ -284,6 +285,8 @@ int main(int argc, char* argv[]) {
         return SDL_APP_FAILURE;
     }
 
+    auto viewport = GEngine->Config.get_viewport();
+
     ctx.renderer = GEngine->get_renderer();
 
     ctx.renderer->load_font("fonts/Minecraft.ttf", "mine", 16);
@@ -304,20 +307,20 @@ int main(int argc, char* argv[]) {
     Node2D* root = new Node2D("Root");
 
     Sprite2D* background = new Sprite2D(bg_tex);
-    background->set_transform({{0, 0}, {1, 1}, 0.0f});
-    background->set_region({0, 0, 288, 512}, {180, 320});
+    background->set_transform({{viewport.width * 0.5f, viewport.height * 0.5f}, {1.f,1.f}, 0.0f});
+    background->set_region({0, 0, 288, 512}, {viewport.width, viewport.height});
     background->set_z_index(-1);
     root->add_child("Background", background);
 
     RigidBody2D* player = new RigidBody2D();
     player->body_type   = BodyType::DYNAMIC;
     player->body_size   = {16, 16};
-    player->offset      = {16, 12};
+    // player->offset      = {16, 12};
     player->shape_type  = ShapeType::CIRCLE;
     player->radius      = 12;
     player->set_layer(0);
     player->set_collision_layers({1});
-    player->set_transform({{40, GEngine->Config.get_viewport().height / 2}, {1.f, 1.f}, 0.0f});
+    player->set_transform({{40, viewport.height / 2}, {1.f, 1.f}, 0.0f});
 
     auto texture            = ctx.renderer->load_texture("flappy/sprites/yellowbird-midflap.png");
     Sprite2D* player_sprite = new Sprite2D(texture);
@@ -329,24 +332,24 @@ int main(int argc, char* argv[]) {
     name->set_transform({{10, 10}, {1.f, 1.f}, 0.0f});
 
     Label* game_info = new Label("mine", "None");
-    game_info->set_transform({{50, GEngine->Config.get_viewport().height / 2}, {1.f, 1.f}, 0.0f});
+    game_info->set_transform({{50, viewport.height / 2}, {1.f, 1.f}, 0.0f});
     game_info->change_visibility(false);
     game_info->set_z_index(1001);
 
     Sprite2D* pause_btn = new Sprite2D(pause_tex);
-    pause_btn->set_transform({{GEngine->Config.get_viewport().width - 30, 5}, {1.f, 1.f}, 0.0f});
+    pause_btn->set_transform({{viewport.width - 30, 15}, {1.f, 1.f}, 0.0f});
     pause_btn->set_z_index(1001);
 
     Sprite2D* share_btn = new Sprite2D(share_tex);
-    share_btn->set_region({0, 0, 80, 28}, {80, 28});
-    share_btn->set_transform({{5, game_info->get_transform().position.y + 40}, {1.f, 1.f}, 0.0f});
+    // share_btn->set_region({0, 0, 80, 28}, {80, 28});
+    share_btn->set_transform({{45, game_info->get_transform().position.y + 50}, {1.f, 1.f}, 0.0f});
     share_btn->change_visibility(false);
     share_btn->set_z_index(1001);
 
     Sprite2D* start_btn = new Sprite2D(start_tex);
     start_btn->set_color({200, 200, 200, 255});
-    start_btn->set_region({0, 0, 80, 28}, {80, 28});
-    start_btn->set_transform({{95, game_info->get_transform().position.y + 40}, {1.f, 1.f}, 0.0f});
+    // start_btn->set_region({0, 0, 80, 28}, {80, 28});
+    start_btn->set_transform({{135, game_info->get_transform().position.y + 50}, {1.f, 1.f}, 0.0f});
     start_btn->change_visibility(false);
     start_btn->set_z_index(1001);
 
